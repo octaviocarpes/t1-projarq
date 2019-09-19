@@ -26,6 +26,32 @@ class UsersManager:
 
             return False
 
+    def get_user(self, username, is_student):
+        if is_student:
+            if username not in self.students.keys():
+                return self.users_database.get_student(username)
+
+            return self.students[username]
+
+        else:
+            if username not in self.valuers.keys():
+                return self.users_database.get_valuer(username)
+
+            return self.valuers[username]
+
+    def remove_user(self, username, is_student):
+        if is_student:
+            if username in self.students.keys():
+                del self.students[username]
+
+            return self.users_database.delete_student(username)
+
+        else:
+            if username in self.valuers.keys():
+                del self.valuers[username]
+
+            return self.users_database.delete_valuer(username)
+
     def check_user(self, username, password, is_student):
         if is_student:
             if username not in self.students.keys():
@@ -48,16 +74,3 @@ class UsersManager:
                 return False
 
             return self.valuers[username].password == password
-
-    def get_user(self, username, is_student):
-        if is_student:
-            if username not in self.students.keys():
-                return self.users_database.get_student(username)
-
-            return self.students[username]
-
-        else:
-            if username not in self.valuers.keys():
-                return self.users_database.get_valuer(username)
-
-            return self.valuers[username]

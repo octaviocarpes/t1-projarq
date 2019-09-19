@@ -14,7 +14,7 @@ manager = Manager()
 
 @app.route('/login', methods=['POST'])
 def login():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -44,7 +44,7 @@ def login():
 
 @app.route('/avaliadores', methods=['POST'])
 def register_valuer():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -73,7 +73,7 @@ def register_valuer():
 
 @app.route('/avaliadores/avaliar', methods=['POST'])
 def rate_team():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -110,7 +110,7 @@ def rate_team():
 
 @app.route('/equipes', methods=['GET'])
 def get_teams():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -136,7 +136,7 @@ def get_teams():
 
 @app.route('/equipes/<team_name>', methods=['GET'])
 def get_team(team_name):
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -166,7 +166,7 @@ def get_team(team_name):
 
 @app.route('/equipes/equipe', methods=['POST'])
 def create_team():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -175,15 +175,13 @@ def create_team():
             status_code = 403
 
         else:
-
-            # socket needs to notify all the clients about the changes
-
             team_name = data['team_name']
-            admin_name = data['admin']
+            admin_name = data['username']
 
-            if manager.create_team(team_name, admin_name):
+            if manager.add_team(team_name, admin_name):
                 response['data'] = 'Team created'
                 status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
 
             else:
                 status_code = 401
@@ -202,7 +200,7 @@ def create_team():
 
 @app.route('/equipes/equipe', methods=['DELETE'])
 def delete_team():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -211,15 +209,13 @@ def delete_team():
             status_code = 403
 
         else:
-
-            # socket needs to notify all the clients about the changes
-
             team_name = data['team_name']
-            admin_name = data['admin']
+            admin_name = data['username']
 
             if manager.delete_team(team_name, admin_name):
                 response['data'] = 'Team deleted'
                 status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
 
             else:
                 status_code = 401
@@ -236,9 +232,9 @@ def delete_team():
     return jsonify(response), status_code
 
 
-@app.route('/equipes/equipe', methods=['PUT'])
-def edit_team():
-    response = {'data': None}
+@app.route('/equipes/equipe/team', methods=['PUT'])
+def edit_team_add_members():
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -247,16 +243,117 @@ def edit_team():
             status_code = 403
 
         else:
-
-            # socket needs to notify all the clients about the changes
-
             team_name = data['team_name']
-            admin = data['admin']
+            admin = data['username']
             members = data['members']
 
             if manager.add_members(team_name, admin, members):
                 response['data'] = 'Members added'
                 status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
+
+            else:
+                status_code = 401
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/equipes/equipe/team', methods=['DELETE'])
+def edit_team_remove_members():
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            team_name = data['team_name']
+            admin = data['username']
+            members = data['members']
+
+            if manager.delete_members(team_name, admin, members):
+                response['data'] = 'Members removed'
+                status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
+
+            else:
+                status_code = 401
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/equipes/equipe/me', methods=['PUT'])
+def enter_team():
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            team_name = data['team_name']
+            username = data['username']
+
+            if manager.add_member(team_name, username):
+                response['data'] = 'User added'
+                status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
+
+            else:
+                status_code = 401
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/equipes/equipe/me', methods=['DELETE'])
+def leave_team():
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            team_name = data['team_name']
+            username = data['username']
+
+            if manager.delete_member(team_name, username):
+                response['data'] = 'User removed'
+                status_code = 200
+                socket.emit('teams_update', manager.get_teams(), broadcast=True)
 
             else:
                 status_code = 401
@@ -275,7 +372,7 @@ def edit_team():
 
 @app.route('/equipes/rank', methods=['GET'])
 def teams_rank():
-    response = {'data': None}
+    response = {'data': 'Error'}
 
     try:
         data = request.get_json()
@@ -286,6 +383,106 @@ def teams_rank():
         else:
             response['data'] = manager.get_teams_rank()
             status_code = 200
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/certificates', methods=['GET'])
+def get_certificates():
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            valuer_name = data['valuer']
+
+            certificates = manager.get_certificates(valuer_name)
+
+            if not certificates:
+                status_code = 404
+
+            else:
+                response['data'] = certificates
+                status_code = 200
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/certificates/<student_name>', methods=['GET'])
+def get_certificate(student_name):
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            valuer_name = data['valuer']
+
+            certificate = manager.get_certificate(valuer_name, student_name)
+
+            if certificate is None:
+                status_code = 404
+
+            else:
+                response['data'] = certificate
+                status_code = 200
+
+    except json.JSONDecodeError:
+        status_code = 415
+
+    except KeyError:
+        status_code = 400
+
+    except TypeError:
+        status_code = 400
+
+    return jsonify(response), status_code
+
+
+@app.route('/certificates/<student_name>', methods=['POST'])
+def generate_certificate(student_name):
+    response = {'data': 'Error'}
+
+    try:
+        data = request.get_json()
+
+        if not check_key(data['key']):
+            status_code = 403
+
+        else:
+            valuer_name = data['valuer']
+
+            if not manager.generate_certificate(valuer_name, student_name):
+                status_code = 401
+
+            else:
+                response['data'] = 'Certificate created'
+                status_code = 200
 
     except json.JSONDecodeError:
         status_code = 415
